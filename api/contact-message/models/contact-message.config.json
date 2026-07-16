@@ -1,0 +1,23 @@
+{
+  "settings": {
+    "mainField": "fullName",
+    "defaultSortBy": "created_at",
+    "defaultSortOrder": "DESC",
+    "bulkable": true,
+    "filterable": true,
+    "searchable": true,
+    "pageSize": 10
+  },
+  "layouts": {
+    "list": ["fullName", "mobile", "isRead", "created_at"],
+    "editRelations": [],
+    "edit": [
+      [
+        { "name": "fullName", "size": 6 },
+        { "name": "mobile", "size": 6 }
+      ],
+      [{ "name": "isRead", "size": 4 }],
+      [{ "name": "message", "size": 12 }]
+    ]
+  }
+}

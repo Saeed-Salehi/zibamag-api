@@ -62,7 +62,10 @@ function Row({
       },
     },
     {
-      icon: canCreate ? <Duplicate fill="black" /> : null,
+      icon:
+        canCreate && apiID !== "contact-message" ? (
+          <Duplicate fill="black" />
+        ) : null,
       onClick: (e) => {
         e.stopPropagation();
         goTo(`create/clone/${row.id}`);

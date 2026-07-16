@@ -111,8 +111,16 @@ function ListView({
   ]);
   const {
     isLoading: isLoadingForPermissions,
-    allowedActions: { canCreate, canRead, canUpdate, canDelete },
+    allowedActions: {
+      canCreate: canCreatePermission,
+      canRead,
+      canUpdate,
+      canDelete,
+    },
   } = useUserPermissions(viewPermissions);
+  // Contact messages are only created from the website form
+  const canCreate =
+    canCreatePermission && slug !== "application::contact-message.contact-message";
   const defaultSort = `${defaultSortBy}:${defaultSortOrder}`;
   const initParams = useMemo(
     () => ({ page: 1, pageSize: defaultPageSize, _sort: defaultSort }),
