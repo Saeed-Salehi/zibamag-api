@@ -1,6 +1,20 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const CONTACT_MESSAGE_UID = 'application::contact-message.contact-message';
+
+/**
+ * Local upload provider writes to public/uploads; ensure the directory exists.
+ */
+function ensureUploadsDir() {
+  const uploadsDir = path.join(strapi.dir, 'public', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    strapi.log.info(`Created missing uploads directory at ${uploadsDir}`);
+  }
+}
 
 /**
  * Enable Public role permission to create contact messages from the website form.
@@ -57,6 +71,7 @@ async function disableAdminContactMessageCreate() {
 }
 
 module.exports = async () => {
+  ensureUploadsDir();
   await enablePublicContactMessageCreate();
 
   // Admin bootstrap runs AFTER app bootstrap and calls resetSuperAdminPermissions,
