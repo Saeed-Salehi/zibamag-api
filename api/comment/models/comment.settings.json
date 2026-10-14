@@ -1,0 +1,32 @@
+{
+  "kind": "collectionType",
+  "collectionName": "comments",
+  "info": {
+    "name": "comment",
+    "description": "Article comments — approve in admin before public display"
+  },
+  "options": {
+    "increments": true,
+    "timestamps": true,
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "authorName": {
+      "type": "string",
+      "required": true
+    },
+    "body": {
+      "type": "text",
+      "required": true
+    },
+    "approved": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "article": {
+      "model": "article",
+      "via": "comments"
+    }
+  }
+}

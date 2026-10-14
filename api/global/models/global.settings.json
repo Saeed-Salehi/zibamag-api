@@ -27,9 +27,7 @@
     "cover": {
       "model": "file",
       "via": "related",
-      "allowedTypes": [
-        "images"
-      ],
+      "allowedTypes": ["images"],
       "plugin": "upload",
       "required": true
     },
@@ -38,6 +36,12 @@
       "repeatable": false,
       "component": "global.main-social-urls",
       "required": false
+    },
+    "homeHero": {
+      "model": "article"
+    },
+    "homeFeed": {
+      "collection": "article"
     }
   }
 }

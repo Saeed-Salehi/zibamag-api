@@ -31,9 +31,7 @@
     "cover": {
       "model": "file",
       "via": "related",
-      "allowedTypes": [
-        "images"
-      ],
+      "allowedTypes": ["images"],
       "plugin": "upload",
       "required": true
     },
@@ -43,6 +41,31 @@
     "description": {
       "type": "text",
       "required": true
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "views": {
+      "type": "integer",
+      "default": 0
+    },
+    "ratingSum": {
+      "type": "integer",
+      "default": 0
+    },
+    "ratingCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "tags": {
+      "collection": "tag",
+      "via": "articles",
+      "dominant": true
+    },
+    "comments": {
+      "collection": "comment",
+      "via": "article"
     }
   }
 }

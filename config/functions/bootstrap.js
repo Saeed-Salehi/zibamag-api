@@ -5,9 +5,6 @@ const path = require('path');
 
 const CONTACT_MESSAGE_UID = 'application::contact-message.contact-message';
 
-/**
- * Local upload provider writes to public/uploads; ensure the directory exists.
- */
 function ensureUploadsDir() {
   const uploadsDir = path.join(strapi.dir, 'public', 'uploads');
   if (!fs.existsSync(uploadsDir)) {
@@ -16,42 +13,59 @@ function ensureUploadsDir() {
   }
 }
 
-/**
- * Enable Public role permission to create contact messages from the website form.
- */
-async function enablePublicContactMessageCreate() {
+async function enablePublicPermission(controller, action) {
   const publicRole = await strapi
     .query('role', 'users-permissions')
     .findOne({ type: 'public' });
 
-  if (!publicRole) {
-    return;
-  }
+  if (!publicRole) return;
 
   const permission = await strapi.query('permission', 'users-permissions').findOne({
     role: publicRole.id,
     type: 'application',
-    controller: 'contact-message',
-    action: 'create',
+    controller,
+    action,
   });
 
-  if (!permission) {
-    return;
-  }
+  if (!permission) return;
 
   if (!permission.enabled) {
     await strapi
       .query('permission', 'users-permissions')
       .update({ id: permission.id }, { enabled: true });
-
-    strapi.log.info('Enabled Public create permission for contact-message');
+    strapi.log.info(`Enabled Public ${controller}.${action}`);
   }
 }
 
-/**
- * Contact messages must only be created from the website form,
- * so remove Content Manager "create" permission for all admin roles.
- */
+async function enablePublicSitePermissions() {
+  const pairs = [
+    ['contact-message', 'create'],
+    ['comment', 'create'],
+    ['comment', 'find'],
+    ['comment', 'findone'],
+    ['comment', 'count'],
+    ['tag', 'find'],
+    ['tag', 'findone'],
+    ['tag', 'count'],
+    ['article', 'find'],
+    ['article', 'findone'],
+    ['article', 'count'],
+    ['article', 'view'],
+    ['article', 'rate'],
+    ['category', 'find'],
+    ['category', 'findone'],
+    ['contributor', 'find'],
+    ['contributor', 'findone'],
+    ['global', 'find'],
+    ['pages', 'find'],
+    ['pages', 'findone'],
+  ];
+
+  for (const [controller, action] of pairs) {
+    await enablePublicPermission(controller, action);
+  }
+}
+
 async function disableAdminContactMessageCreate() {
   const permissions = await strapi.query('permission', 'admin').find({
     action: 'plugins::content-manager.explorer.create',
@@ -59,12 +73,9 @@ async function disableAdminContactMessageCreate() {
     _limit: -1,
   });
 
-  if (!permissions.length) {
-    return;
-  }
+  if (!permissions.length) return;
 
   await strapi.admin.services.permission.deleteByIds(permissions.map((p) => p.id));
-
   strapi.log.info(
     'Disabled admin create permission for Contact Message (website form only)'
   );
@@ -72,10 +83,8 @@ async function disableAdminContactMessageCreate() {
 
 module.exports = async () => {
   ensureUploadsDir();
-  await enablePublicContactMessageCreate();
+  await enablePublicSitePermissions();
 
-  // Admin bootstrap runs AFTER app bootstrap and calls resetSuperAdminPermissions,
-  // which would re-grant create. Wrap it so we remove create right after.
   const roleService = strapi.admin.services.role;
   const originalReset = roleService.resetSuperAdminPermissions.bind(roleService);
 

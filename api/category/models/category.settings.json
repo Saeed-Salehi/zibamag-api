@@ -26,13 +26,15 @@
     "cover": {
       "model": "file",
       "via": "related",
-      "allowedTypes": [
-        "files",
-        "images",
-        "videos"
-      ],
+      "allowedTypes": ["files", "images", "videos"],
       "plugin": "upload",
       "required": false
+    },
+    "heroArticle": {
+      "model": "article"
+    },
+    "feedArticles": {
+      "collection": "article"
     }
   }
 }
