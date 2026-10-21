@@ -19,6 +19,12 @@
       "config": { "policies": [] }
     },
     {
+      "method": "GET",
+      "path": "/articles/:id/rate",
+      "handler": "article.rateInfo",
+      "config": { "policies": [] }
+    },
+    {
       "method": "POST",
       "path": "/articles/:id/rate",
       "handler": "article.rate",

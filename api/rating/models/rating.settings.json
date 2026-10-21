@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ratings",
+  "info": {
+    "name": "rating",
+    "description": "One score per reader per article. A later vote replaces the previous one."
+  },
+  "options": {
+    "increments": true,
+    "timestamps": true,
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "voteKey": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "voter": {
+      "type": "string",
+      "required": true
+    },
+    "value": {
+      "type": "integer",
+      "required": true,
+      "min": 1,
+      "max": 5
+    },
+    "article": {
+      "model": "article"
+    }
+  }
+}

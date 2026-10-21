@@ -52,6 +52,7 @@ async function enablePublicSitePermissions() {
     ['article', 'count'],
     ['article', 'view'],
     ['article', 'rate'],
+    ['article', 'rateinfo'],
     ['category', 'find'],
     ['category', 'findone'],
     ['contributor', 'find'],
