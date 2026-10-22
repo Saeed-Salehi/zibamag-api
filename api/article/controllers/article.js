@@ -14,6 +14,11 @@ function toRating(value) {
   return rating;
 }
 
+function roundAverage(sum, count) {
+  if (!count) return 0;
+  return Math.round((sum / count) * 10) / 10;
+}
+
 function summarize(rows) {
   let ratingSum = 0;
   let ratingCount = 0;
@@ -28,7 +33,7 @@ function summarize(rows) {
   return {
     ratingSum,
     ratingCount,
-    average: ratingCount ? ratingSum / ratingCount : 0,
+    average: roundAverage(ratingSum, ratingCount),
   };
 }
 
@@ -49,8 +54,24 @@ function readVoter(ctx) {
   return voterId;
 }
 
+function voteKeyFor(articleId, voter) {
+  return `${articleId}:${voter}`;
+}
+
 async function loadVotes(articleId) {
   return strapi.query('rating').find({ article: articleId, _limit: -1 });
+}
+
+async function findVotesForVoter(articleId, voter) {
+  const voteKey = voteKeyFor(articleId, voter);
+  const byKey = await strapi.query('rating').find({ voteKey, _limit: 20 });
+  if (byKey && byKey.length) return byKey;
+
+  return strapi.query('rating').find({
+    article: articleId,
+    voter,
+    _limit: 20,
+  });
 }
 
 async function refreshArticleRating(articleId) {
@@ -62,11 +83,23 @@ async function refreshArticleRating(articleId) {
   return summary;
 }
 
+/**
+ * One score per voter per article. Repeat clicks update the same row —
+ * they must never create extra votes or inflate ratingCount.
+ */
 async function saveVote(articleId, voter, value) {
-  const voteKey = `${articleId}:${voter}`;
-  const existing = await strapi.query('rating').findOne({ voteKey });
+  const voteKey = voteKeyFor(articleId, voter);
+  const matches = await findVotesForVoter(articleId, voter);
+  const primary = matches[0] || null;
 
-  if (!existing) {
+  // Collapse accidental duplicates from older buggy clients/deploys.
+  if (matches.length > 1) {
+    for (let i = 1; i < matches.length; i += 1) {
+      await strapi.query('rating').delete({ id: matches[i].id });
+    }
+  }
+
+  if (!primary) {
     try {
       await strapi.query('rating').create({
         voteKey,
@@ -76,16 +109,19 @@ async function saveVote(articleId, voter, value) {
       });
       return 'created';
     } catch (error) {
-      const raced = await strapi.query('rating').findOne({ voteKey });
-      if (!raced) throw error;
-      if (toRating(raced.value) === value) return 'unchanged';
-      await strapi.query('rating').update({ id: raced.id }, { value });
+      const raced = await findVotesForVoter(articleId, voter);
+      if (!raced.length) throw error;
+      if (toRating(raced[0].value) === value) return 'unchanged';
+      await strapi.query('rating').update({ id: raced[0].id }, { value, voteKey });
       return 'updated';
     }
   }
 
-  if (toRating(existing.value) === value) return 'unchanged';
-  await strapi.query('rating').update({ id: existing.id }, { value });
+  if (toRating(primary.value) === value) return 'unchanged';
+  await strapi.query('rating').update(
+    { id: primary.id },
+    { value, voteKey, voter, article: articleId }
+  );
   return 'updated';
 }
 
@@ -97,6 +133,17 @@ function ratingPayload(summary, userRating, status) {
     userRating: userRating == null ? null : userRating,
     status: status || null,
   };
+}
+
+function legacySummary(article) {
+  const ratingCount = Math.max(0, Math.floor(Number(article.ratingCount) || 0));
+  const ratingSum = Number(article.ratingSum) || 0;
+  if (ratingCount <= 0 || ratingSum <= 0) return null;
+
+  // Old endpoint added the clicked star on every request, so legacy
+  // averages can be nonsense — clamp to a displayable 1..5 star mean.
+  const average = Math.min(5, Math.max(1, roundAverage(ratingSum, ratingCount)));
+  return { ratingSum, ratingCount, average };
 }
 
 module.exports = {
@@ -115,23 +162,17 @@ module.exports = {
     const article = await strapi.query('article').findOne({ id });
     if (!article) return ctx.notFound('Article not found');
 
-    const summary = summarize(await loadVotes(article.id));
+    let summary = summarize(await loadVotes(article.id));
     if (summary.ratingCount === 0) {
-      const legacyCount = Number(article.ratingCount) || 0;
-      const legacySum = Number(article.ratingSum) || 0;
-      if (legacyCount > 0 && legacySum > 0) {
-        summary.ratingCount = legacyCount;
-        summary.ratingSum = legacySum;
-        summary.average = Math.min(5, legacySum / legacyCount);
-      }
+      const legacy = legacySummary(article);
+      if (legacy) summary = legacy;
     }
+
     const voter = readVoter(ctx);
     let userRating = null;
     if (voter) {
-      const existing = await strapi.query('rating').findOne({
-        voteKey: `${article.id}:${voter}`,
-      });
-      userRating = existing ? toRating(existing.value) : null;
+      const existing = await findVotesForVoter(article.id, voter);
+      userRating = existing[0] ? toRating(existing[0].value) : null;
     }
 
     return ratingPayload(summary, userRating, null);
